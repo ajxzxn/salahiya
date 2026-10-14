@@ -45,14 +45,17 @@ function clean(d) {
   const date = String(d.date || '');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(utcOf(date))) return null;
   return {
-    id: String(d.id || uid()).slice(0, 24),
-    holder: String(d.holder || '').trim().slice(0, 80) || 'المنشأة',
+    // ids go into the ICS UID unescaped, so only [a-z0-9] survive (an imported backup is untrusted input)
+    id: (String(d.id || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 24)) || uid(),
+    holder: oneLine(d.holder).slice(0, 80) || 'المنشأة',
     type: TYPE_LABEL[d.type] ? d.type : 'other',
     date,
-    note: String(d.note || '').trim().slice(0, 160),
-    est: String(d.est || '').trim().slice(0, 80),
+    note: oneLine(d.note).slice(0, 160),
+    est: oneLine(d.est).slice(0, 80),
   };
 }
+// Strip every control character (CR, LF, tab, NUL, bidi-unsafe C0/C1) — names and notes are single-line text.
+function oneLine(v) { return String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]+/g, ' ').replace(/\s+/g, ' ').trim(); }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
 /* ---------- dates ---------- */
@@ -116,7 +119,13 @@ let plan = { ok: false };
 const limitReached = () => paymentsOn() && !plan.ok && state.docs.length >= CONFIG.FREE_LIMIT;
 
 /* ---------- ICS export ---------- */
-function icsEscape(s) { return String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n'); }
+// RFC 5545 TEXT escaping. Any line break (CRLF, bare CR, bare LF, U+2028/9) becomes the two characters \\n; other control
+// characters are dropped, so no input can end a content line and start a new property or VEVENT.
+function icsEscape(s) {
+  return String(s).replace(/\r\n|[\r\n\u2028\u2029]/g, '\n').replace(/[\u0000-\u0009\u000b-\u001f\u007f-\u009f]/g, '')
+    .replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+}
+const icsId = (id) => String(id).replace(/[^a-z0-9]/gi, '').slice(0, 24) || 'x';
 function foldLine(line) {
   const enc = new TextEncoder(); const out = []; let cur = ''; let bytes = 0;
   for (const ch of line) { const b = enc.encode(ch).length; if (bytes + b > (out.length ? 74 : 75)) { out.push(cur); cur = ''; bytes = 0; } cur += ch; bytes += b; }
@@ -126,9 +135,10 @@ function buildIcs(docs, now = new Date()) {
   const stamp = now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Salahiya//AR', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:صلاحية — مواعيد الانتهاء'];
   for (const d of docs) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d.date) || isNaN(utcOf(d.date))) continue;
     const start = d.date.replace(/-/g, ''); const end = isoFromUTC(utcOf(d.date) + 86400000).replace(/-/g, '');
     const title = `انتهاء ${TYPE_LABEL[d.type]} — ${d.holder}`;
-    L.push('BEGIN:VEVENT', `UID:${d.id}@salahiya`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${start}`, `DTEND;VALUE=DATE:${end}`,
+    L.push('BEGIN:VEVENT', `UID:${icsId(d.id)}@salahiya`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${start}`, `DTEND;VALUE=DATE:${end}`,
       `SUMMARY:${icsEscape(title)}`, `DESCRIPTION:${icsEscape([d.est && 'المنشأة: ' + d.est, d.note, 'جدّد قبل الموعد عبر المنصة الرسمية.'].filter(Boolean).join('\n'))}`, 'TRANSP:TRANSPARENT');
     for (const [trig, txt] of [['-P29DT15H', 'بعد 30 يومًا'], ['-P6DT15H', 'بعد 7 أيام'], ['-PT15H', 'غدًا']]) {
       L.push('BEGIN:VALARM', 'ACTION:DISPLAY', `TRIGGER:${trig}`, `DESCRIPTION:${icsEscape(title + ' — ' + txt)}`, 'END:VALARM');

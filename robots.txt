@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://ajxzxn.github.io/salahiya/sitemap.xml

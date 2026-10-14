@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>صلاحية — لوحة الوثائق</title>
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="logo" href="./"><span class="mark" aria-hidden="true">ص</span>صلاحية</a>
+  <nav class="top"><a href="guides/" class="hide-sm">أدلة الغرامات</a><a href="privacy.html">الخصوصية</a></nav>
+</div></header>
+
+<main class="wrap" id="app-root">
+  <div class="banner test" id="test-banner" hidden>وضع الدفع التجريبي — لا بوابة دفع حقيقية ولا يُخصم أي مبلغ.</div>
+  <div class="banner warn" id="storage-warn" hidden>متصفحك لا يسمح بالحفظ على هذا الجهاز. احفظ نسخة احتياطية قبل الإغلاق.</div>
+
+  <h1 class="app-h1">وثائق منشأتك وعمالها</h1>
+  <p class="note" id="plan-line"></p>
+
+  <div class="stats" role="group" aria-label="تصفية حسب الحالة">
+    <button type="button" class="stat expired" data-f="expired" aria-pressed="false"><b id="c-expired">0</b><span>منتهية</span></button>
+    <button type="button" class="stat soon" data-f="soon" aria-pressed="false"><b id="c-soon">0</b><span>خلال 30 يومًا</span></button>
+    <button type="button" class="stat mid" data-f="mid" aria-pressed="false"><b id="c-mid">0</b><span>خلال 90 يومًا</span></button>
+    <button type="button" class="stat valid" data-f="valid" aria-pressed="false"><b id="c-valid">0</b><span>سارية</span></button>
+  </div>
+
+  <div class="toolbar">
+    <button class="btn primary" id="btn-add" type="button">+ إضافة وثيقة</button>
+    <button class="btn" id="btn-bulk" type="button">لصق من إكسل</button>
+    <button class="btn" id="btn-ics" type="button">تنبيهات في التقويم</button>
+    <input type="search" id="search" placeholder="ابحث بالاسم أو النوع" aria-label="بحث">
+  </div>
+
+  <div class="list" id="list" aria-live="polite"></div>
+
+  <div class="toolbar mt">
+    <span class="note">المجموع: <b id="total">0</b></span>
+    <button class="btn small" id="btn-backup" type="button">نسخة احتياطية</button>
+    <button class="btn small" id="btn-restore" type="button">استعادة</button>
+    <input type="file" id="file-restore" accept="application/json,.json" hidden>
+    <button class="btn small" id="btn-upgrade" type="button">الخطط</button>
+  </div>
+  <p class="note">بياناتك تبقى على هذا الجهاز فقط ولا تُرسل لأي خادم. التنبيهات تُضاف لتقويم جوالك (آيفون: تنبيهات قبل 30 و7 أيام ويوم. أندرويد/قوقل: تُستخدم تنبيهات تقويمك الافتراضية).</p>
+
+  <details class="fines">
+    <summary>غرامات شائعة عند التأخر في التجديد</summary>
+    <table class="fines">
+      <tr><th>الوثيقة</th><th>ما ورد في المصادر</th></tr>
+      <tr><td>الإقامة</td><td>500 ريال أول مرة، 1000 ريال ثاني مرة، وقد يصل للترحيل في الثالثة. يتحملها صاحب العمل.</td></tr>
+      <tr><td>رخصة العمل</td><td>قوى: إلغاء تسجيل العامل تلقائيًا إذا بقيت رخصته منتهية أكثر من ثلاثة أشهر بعد 30 يونيو 2026.</td></tr>
+      <tr><td>الشهادة الصحية</td><td>200 إلى 1000 ريال عن كل عامل بدون شهادة صحية سارية، مع منعه من العمل حتى يحصل عليها.</td></tr>
+      <tr><td>السجل التجاري</td><td>عدم التأكيد السنوي خلال 90 يومًا يؤدي لإنذار ثم تعليق السجل.</td></tr>
+    </table>
+    <p class="src">المبالغ من مصادر إخبارية وقانونية منشورة وقد تتغير. تحقق دائمًا من المنصة الرسمية (أبشر، مقيم، قوى، بلدي، المركز السعودي للأعمال). التفاصيل والمصادر في <a href="guides/">الأدلة</a>.</p>
+  </details>
+</main>
+
+<dialog id="dlg-doc" aria-labelledby="dlg-title"><form class="dlg" id="form-doc" novalidate>
+  <h2 id="dlg-title">إضافة وثيقة</h2>
+  <div class="form">
+    <div><label for="f-holder">صاحب الوثيقة</label><input id="f-holder" maxlength="80" placeholder="اسم العامل، أو اتركه للمنشأة" autocomplete="off"></div>
+    <div><label for="f-type">نوع الوثيقة</label><select id="f-type"></select></div>
+    <div class="full"><label for="f-date">تاريخ الانتهاء</label>
+      <div class="date-row">
+        <div class="seg" id="cal-seg" role="group" aria-label="نوع التقويم"><button type="button" data-cal="g" aria-pressed="true">ميلادي</button><button type="button" data-cal="h" aria-pressed="false">هجري</button></div>
+        <input id="f-date" dir="ltr" class="date-in" inputmode="numeric" autocomplete="off" required>
+      </div>
+      <div class="hint" id="date-hint" aria-live="polite"></div></div>
+    <div><label for="f-est">المنشأة / الفرع (اختياري)</label><input id="f-est" maxlength="80" autocomplete="off"></div>
+    <div><label for="f-note">ملاحظة (اختياري)</label><input id="f-note" maxlength="160" autocomplete="off"></div>
+  </div>
+  <div class="dlg-actions"><button class="btn primary" type="submit">حفظ</button><button class="btn" type="button" data-close>إلغاء</button></div>
+</form></dialog>
+
+<dialog id="dlg-bulk" aria-labelledby="bulk-title"><div class="dlg">
+  <h2 id="bulk-title">لصق قائمة من إكسل</h2>
+  <p class="note">كل سطر: الاسم، نوع الوثيقة، تاريخ الانتهاء (ميلادي أو هجري). انسخ الأعمدة الثلاثة من إكسل والصقها هنا.</p>
+  <textarea id="bulk-text" placeholder="أحمد علي	إقامة	1448/05/12&#10;محمد رفيق	شهادة صحية	2026-12-01&#10;المنشأة	رخصة بلدي	2027-02-15"></textarea>
+  <div class="hint" id="bulk-hint"></div>
+  <div class="dlg-actions"><button class="btn primary" type="button" id="bulk-go">إضافة</button><button class="btn" type="button" data-close>إلغاء</button></div>
+</div></dialog>
+
+<dialog id="dlg-up" aria-labelledby="up-title"><div class="dlg">
+  <h2 id="up-title">خطط صلاحية</h2>
+  <p class="banner info" id="up-limit" hidden>وصلت حد الخطة المجانية (10 وثائق). رقِّ خطتك لتضيف بلا حد.</p>
+  <div class="price">
+    <div class="card"><h3>المنشأة</h3><div class="amount">199 ريال <span class="note">/ سنة</span></div><ul><li>وثائق بلا حد</li><li>تنبيهات التقويم</li></ul>
+      <button class="btn primary" type="button" data-buy="pro" id="buy-pro" hidden>ادفع (تجريبي)</button></div>
+    <div class="card"><h3>مكتب التعقيب</h3><div class="amount">499 ريال <span class="note">/ سنة</span></div><ul><li>عدة منشآت وعملاء</li><li>تصفية حسب المنشأة</li></ul>
+      <button class="btn primary" type="button" data-buy="office" id="buy-office" hidden>ادفع (تجريبي)</button></div>
+  </div>
+  <p class="note" id="up-soon">الدفع الإلكتروني يُفعَّل قريبًا. خلال الإطلاق المبكر كل المزايا مجانية.</p>
+  <div id="up-live" hidden>
+    <label for="lic-input" class="mt">لديك مفتاح ترخيص؟</label>
+    <input id="lic-input" autocomplete="off" spellcheck="false" placeholder="SLH1....">
+    <div class="hint" id="lic-hint"></div>
+    <button class="btn" type="button" id="lic-apply">تفعيل</button>
+  </div>
+  <div class="dlg-actions"><button class="btn" type="button" data-close>إغلاق</button></div>
+</div></dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="assets/app.js"></script>
+</body>
+</html>

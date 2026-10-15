@@ -2,7 +2,8 @@
 //
 // FORM_ENDPOINT, one of:
 //   - a Formspree form URL, https://formspree.io/f/<id>: the page posts its own fields there and shows the thank-you line
-//     (field names: business_name, segment, workers, city, contact_method, contact; _gotcha is the spam trap);
+//     (field names: business_name, segment, workers, city, contact_method, contact, and audience = business | moaqqib;
+//     _gotcha is the spam trap);
 //   - a hosted Google Forms or Tally link (https://docs.google.com/forms/..., https://forms.gle/..., https://tally.so/...):
 //     the page hides its own fields and shows one button that opens that form.
 //   Left empty, the button says registration opens soon and offers the support email below.
